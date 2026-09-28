@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中文詞語測驗/練習方格紙生成器</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+    /* Traditional Chinese School Fonts */
+    .font-biaukai {
+      font-family: "DFKai-SB", "BiauKai", "標楷體", "Noto Serif TC", serif;
+    }
+    .font-jhenghei {
+      font-family: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", sans-serif;
+    }
+    .font-mingliu {
+      font-family: "MingLiU", "新細明體", "Noto Serif TC", serif;
+    }
+
+    /* Print Formatting */
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 6mm;
+      }
+      body {
+        background-color: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .paper-container {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .grid-cell-input {
+        background: transparent !important;
+      }
+    }
+
+    /* Custom Input Grid Cell Styling */
+    .grid-cell-input {
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 0;
+      margin: 0;
+      caret-color: #0284c7;
+      box-sizing: border-box;
+    }
+
+    .grid-cell-input:focus {
+      background-color: rgba(2, 132, 199, 0.08);
+    }
+
+    /* Custom Quick Preset Active Buttons */
+    .btn-preset-active {
+      background-color: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #0284c7 !important;
+      box-shadow: 0 2px 4px rgba(2, 132, 199, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col font-jhenghei">
+
+  <!-- Top Header Bar -->
+  <header class="no-print bg-slate-900 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="bg-sky-500 p-2.5 rounded-xl text-slate-950 font-black shadow-inner">
+          <i class="fa-solid fa-border-all text-xl"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+            中文詞語測驗/練習方格紙生成器
+            <span class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-normal">多格數快捷升級版</span>
+          </h1>
+          <p class="text-xs text-slate-400">專為教師打造 ｜ 支援 10格 / 13格 / 16格 快速切換 ｜ 完全相容速成與倉頡輸入法</p>
+        </div>
+      </div>
+
+      <!-- Header Quick Actions -->
+      <div class="flex items-center space-x-2">
+        <button onclick="openBatchModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition shadow-sm flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>批量匯入詞語</span>
+        </button>
+        <button onclick="clearAllGridContent()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-eraser"></i>
+          <span>清空內容</span>
+        </button>
+        <button onclick="window.print()" class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm rounded-lg transition shadow-md flex items-center gap-2">
+          <i class="fa-solid fa-print"></i>
+          <span>列印 / 存為PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col lg:flex-row gap-6">
+
+    <!-- Control Sidebar Options -->
+    <aside class="no-print w-full lg:w-80 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-5 h-fit shrink-0">
+      
+      <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <h2 class="font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-sky-500"></i> 排版與格數設定
+        </h2>
+        <button onclick="resetDefaultSettings()" class="text-xs text-slate-400 hover:text-sky-600">重設預設</button>
+      </div>
+
+      <!-- Quick Preset Selection (10, 13, 16 Cols) -->
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-slate-700 flex items-center justify-between">
+          <span><i class="fa-solid fa-table-cells text-sky-500 mr-1"></i> 右側正方形格數快捷切換</span>
+          <span id="presetBadge" class="text-[11px] font-normal text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md">13 格 (預設)</span>
+        </label>
+        
+        <div class="grid grid-cols-3 gap-2">
+          <button id="btnPreset10" onclick="setQuickCols(10)" class="preset-btn py-2 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition flex flex-col items-center gap-0.5">
+            <span class="text-sm">10 格</span>
+            <span class="text-[10px] text-slate-400 font-normal">適合較短詞語</span>
+          </button>
+          <button id="btnPreset13" onclick="setQuickCols(13)" class="preset-btn btn-preset-active py-2 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition flex flex-col items-center gap-0.5">
+            <span class="text-sm">13 格</span>
+            <span class="text-[10px] font-normal">原圖經典版</span>
+          </button>
+          <button id="btnPreset16" onclick="setQuickCols(16)" class="preset-btn py-2 px-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition flex flex-col items-center gap-0.5">
+            <span class="text-sm">16 格</span>
+            <span class="text-[10px] text-slate-400 font-normal">適合長句/配詞</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- IME & Auto-jump Controls -->
+      <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200/80 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-keyboard text-amber-600"></i> 中文輸入法優化設定
+          </label>
+        </div>
+        <label class="flex items-center justify-between cursor-pointer pt-1">
+          <span class="text-xs font-medium text-amber-800">輸入後自動移至下一格</span>
+          <input type="checkbox" id="toggleAutoJump" class="sr-only peer" onchange="toggleAutoJumpSetting(this.checked)">
+          <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600 relative"></div>
+        </label>
+        <p class="text-[11px] text-amber-700/80 leading-tight">
+          💡 <strong>速成/倉頡輸入法</strong>：已實作 IME 組字鎖，選字期間絕不提前跳格。若偏好純方向鍵控格，可關閉自動跳格。
+        </p>
+      </div>
+
+      <!-- Grid Dimension Controls -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">細部行列微調</h3>
+        
+        <div>
+          <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+            <span>直向列數 (Rows)</span>
+            <span id="rowsVal" class="font-bold text-slate-800">11 列</span>
+          </div>
+          <input type="range" id="inputRows" min="4" max="22" value="11" oninput="updateGridDimensions()" class="w-full accent-sky-500">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+            <span>自訂正方形欄數 (Cols)</span>
+            <span id="colsVal" class="font-bold text-slate-800">13 欄</span>
+          </div>
+          <input type="range" id="inputCols" min="4" max="20" value="13" oninput="onCustomColsSliderChange(this.value)" class="w-full accent-sky-500">
+        </div>
+
+        <!-- Left Rectangular Column Settings -->
+        <div class="space-y-2 pt-1 border-t border-slate-100">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+            <input type="checkbox" id="toggleLeftCol" checked onchange="updateGridDimensions()" class="rounded text-sky-500 focus:ring-sky-400">
+            <span>顯示左側較長的詞語欄位 (Left Cell)</span>
+          </label>
+
+          <div id="leftWidthBox">
+            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+              <span>左欄寬度 (Width)</span>
+              <span id="leftWidthVal" class="font-bold text-slate-800">130 px</span>
+            </div>
+            <input type="range" id="inputLeftWidth" min="80" max="200" value="130" oninput="updateGridDimensions()" class="w-full accent-sky-500">
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-100">
+
+      <!-- Appearance Controls -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">字體與格線外觀</h3>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">中文字型 (Font)</label>
+          <select id="selectFont" onchange="updateFontAndColor()" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+            <option value="font-biaukai" selected>標楷體 (School Calligraphy)</option>
+            <option value="font-jhenghei">微軟正黑體 (Modern Sans-Serif)</option>
+            <option value="font-mingliu">新細明體 (MingLiU Traditional)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">格子大小 (Size)</label>
+            <select id="selectGridSize" onchange="updateGridDimensions()" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+              <option value="36">小 (36px)</option>
+              <option value="42">中 (42px)</option>
+              <option value="45" selected>標準 (45px)</option>
+              <option value="50">大 (50px)</option>
+              <option value="58">特大 (58px)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">字級大小 (Font Size)</label>
+            <select id="selectFontSize" onchange="updateFontAndColor()" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+              <option value="20">18 pt</option>
+              <option value="26" selected>24 pt (標準)</option>
+              <option value="32">30 pt</option>
+              <option value="38">36 pt</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">格線顏色 (Line Color)</label>
+          <div class="grid grid-cols-5 gap-1.5">
+            <button onclick="setLineColor('#0088cc')" class="p-1.5 border rounded-lg text-xs font-bold text-sky-600 border-sky-300 bg-sky-50 flex items-center justify-center gap-1" title="經典原圖藍">
+              <span class="w-3 h-3 rounded-full bg-[#0088cc]"></span> 天藍
+            </button>
+            <button onclick="setLineColor('#1e293b')" class="p-1.5 border rounded-lg text-xs font-bold text-slate-700 border-slate-200 hover:bg-slate-50 flex items-center justify-center gap-1" title="純黑">
+              <span class="w-3 h-3 rounded-full bg-slate-800"></span> 墨黑
+            </button>
+            <button onclick="setLineColor('#dc2626')" class="p-1.5 border rounded-lg text-xs font-bold text-red-600 border-red-200 hover:bg-red-50 flex items-center justify-center gap-1" title="朱紅">
+              <span class="w-3 h-3 rounded-full bg-red-600"></span> 朱紅
+            </button>
+            <button onclick="setLineColor('#16a34a')" class="p-1.5 border rounded-lg text-xs font-bold text-green-600 border-green-200 hover:bg-green-50 flex items-center justify-center gap-1" title="綠色">
+              <span class="w-3 h-3 rounded-full bg-green-600"></span> 綠色
+            </button>
+            <button onclick="setLineColor('#94a3b8')" class="p-1.5 border rounded-lg text-xs font-bold text-slate-500 border-slate-200 hover:bg-slate-50 flex items-center justify-center gap-1" title="淺灰">
+              <span class="w-3 h-3 rounded-full bg-slate-400"></span> 淺灰
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="text-xs font-medium text-slate-600">手寫文字顏色 (Text Color)</label>
+          <div class="flex items-center gap-2">
+            <button onclick="setTextColor('#000000')" class="w-6 h-6 rounded-full bg-black border-2 border-white shadow-sm" title="黑色"></button>
+            <button onclick="setTextColor('#0076db')" class="w-6 h-6 rounded-full bg-[#0076db] border-2 border-white shadow-sm" title="藍色"></button>
+            <button onclick="setTextColor('#94a3b8')" class="w-6 h-6 rounded-full bg-slate-400 border-2 border-white shadow-sm" title="淺灰臨摹色"></button>
+            <input type="color" id="textColorPicker" value="#000000" onchange="setTextColor(this.value)" class="w-7 h-7 rounded border-none cursor-pointer bg-transparent">
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-100">
+
+      <!-- Worksheet Header Meta Settings -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">頁面抬頭資訊</h3>
+        <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+          <input type="checkbox" id="toggleHeaderMeta" checked onchange="toggleHeaderMetaView()" class="rounded text-sky-500 focus:ring-sky-400">
+          <span>顯示 姓名 / 班別 / 日期 / 成績 欄位</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+          <input type="checkbox" id="toggleSheetTitle" checked onchange="toggleSheetTitleView()" class="rounded text-sky-500 focus:ring-sky-400">
+          <span>顯示大標題 (中文詞語默寫/測驗紙)</span>
+        </label>
+      </div>
+
+    </aside>
+
+    <!-- Main Grid Sheet Canvas Preview -->
+    <main class="flex-1 flex flex-col items-center overflow-x-auto">
+      
+      <div id="paperSheet" class="paper-container bg-white border border-slate-300 shadow-xl rounded-sm p-6 md:p-10 w-full max-w-[1040px] min-w-[720px] flex flex-col justify-between transition-all duration-200 min-h-[700px]">
+        
+        <div>
+          <!-- Title Container -->
+          <div id="sheetTitleBox" class="text-center mb-4">
+            <h1 id="sheetTitleText" contenteditable="true" class="text-2xl font-bold tracking-wider text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-sky-500 outline-none px-3 py-1 inline-block font-biaukai">
+              中文詞語測驗 / 練習方格紙
+            </h1>
+          </div>
+
+          <!-- Student Meta Header -->
+          <div id="sheetHeaderMeta" class="flex flex-wrap items-center justify-between text-sm text-slate-800 font-medium px-2 mb-5 gap-4 font-jhenghei">
+            <div class="flex items-center gap-1.5">
+              <span>姓名：</span>
+              <span contenteditable="true" class="border-b border-slate-400 min-w-[140px] outline-none focus:border-sky-500 px-1"></span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span>班別：</span>
+              <span contenteditable="true" class="border-b border-slate-400 min-w-[80px] text-center outline-none focus:border-sky-500 px-1"></span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span>日期：</span>
+              <span contenteditable="true" class="border-b border-slate-400 min-w-[110px] text-center outline-none focus:border-sky-500 px-1"></span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span>成績：</span>
+              <span contenteditable="true" class="border-b border-slate-400 min-w-[70px] text-center outline-none focus:border-sky-500 px-1"></span>
+            </div>
+          </div>
+
+          <!-- Dynamic Grid Container -->
+          <div class="w-full flex justify-center my-2 overflow-x-auto">
+            <table id="gridTable" class="border-collapse transition-all duration-150">
+              <!-- Grid dynamically generated by JS -->
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer Remarks -->
+        <div class="mt-8 pt-3 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400 font-jhenghei">
+          <span contenteditable="true" class="outline-none">備註：請字跡工整書寫於方格內。</span>
+          <span id="colCountFootnote">規格：左側詞語欄 + 右側 13 正方形格</span>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Batch Words Import Modal -->
+  <div id="batchModal" class="no-print fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-lg w-full p-6 space-y-4 transform transition-all">
+      
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> 批量填入中文詞語
+        </h3>
+        <button onclick="closeBatchModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 leading-relaxed">
+        請在下方輸入或貼上詞語清單（每行一個詞語）。系統會自動將<strong>完整詞語填入左側長格</strong>，並將<strong>每個字拆解填入右側正方形格子</strong>中！
+      </p>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">詞語清單 (一行一詞)：</label>
+        <textarea id="batchInputText" rows="7" placeholder="例如：
+1. 一絲不苟
+2. 堅持不懈
+3. 持之以恆
+4. 迎難而上" class="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-biaukai"></textarea>
+      </div>
+
+      <div class="flex items-center gap-4 text-xs">
+        <label class="flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer">
+          <input type="checkbox" id="batchAutoNumber" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+          <span>左側長格自動加上題號 (如: 1. 一絲不苟)</span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeBatchModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition">取消</button>
+        <button onclick="executeBatchImport()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-sm shadow-md transition">確認填入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="no-print fixed bottom-5 right-5 bg-slate-800 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50">
+    <i class="fa-solid fa-circle-check text-sky-400 text-lg"></i>
+    <span id="toastMsg">操作成功</span>
+  </div>
+
+  <script>
+    // Global Application State
+    const state = {
+      rows: 11,
+      cols: 13,
+      showLeftCol: true,
+      leftColWidth: 130,
+      gridSize: 45,
+      fontSize: 26,
+      fontFamily: 'font-biaukai',
+      lineColor: '#0088cc',
+      textColor: '#000000',
+      autoJump: false // Default FALSE for optimal Cangjie/Quick IME selection
+    };
+
+    // Composition State for Chinese Input Methods (Quick/Cangjie/Pinyin)
+    let isComposing = false;
+
+    // Window Initialization
+    window.onload = function() {
+      document.getElementById('toggleAutoJump').checked = state.autoJump;
+      updateQuickPresetUI(13);
+      renderGridTable();
+    };
+
+    // Render the Worksheet Grid Table
+    function renderGridTable() {
+      const table = document.getElementById('gridTable');
+      
+      // Cache existing typed values to avoid data loss on layout changes
+      const existingValues = {};
+      document.querySelectorAll('.grid-cell-input').forEach(input => {
+        const r = input.dataset.row;
+        const c = input.dataset.col;
+        if (r !== undefined && c !== undefined) {
+          existingValues[`${r}_${c}`] = input.value;
+        }
+      });
+
+      table.innerHTML = '';
+
+      for (let r = 0; r < state.rows; r++) {
+        const tr = document.createElement('tr');
+
+        // Left Wide Column Cell (Prompt / Title / Word Name)
+        if (state.showLeftCol) {
+          const tdLeft = document.createElement('td');
+          tdLeft.style.width = `${state.leftColWidth}px`;
+          tdLeft.style.height = `${state.gridSize}px`;
+          tdLeft.style.border = `1.5px solid ${state.lineColor}`;
+          tdLeft.style.padding = '0';
+          
+          const inputLeft = document.createElement('input');
+          inputLeft.type = 'text';
+          inputLeft.className = `grid-cell-input ${state.fontFamily}`;
+          inputLeft.style.fontSize = `${Math.max(14, state.fontSize - 6)}px`;
+          inputLeft.style.color = state.textColor;
+          inputLeft.dataset.row = r;
+          inputLeft.dataset.col = 'left';
+          inputLeft.value = existingValues[`${r}_left`] || '';
+
+          // Bind IME & Keyboard Listeners
+          bindInputEvents(inputLeft, r, 'left');
+
+          tdLeft.appendChild(inputLeft);
+          tr.appendChild(tdLeft);
+        }
+
+        // Right Square Column Cells (Character Cells)
+        for (let c = 0; c < state.cols; c++) {
+          const td = document.createElement('td');
+          td.style.width = `${state.gridSize}px`;
+          td.style.height = `${state.gridSize}px`;
+          td.style.border = `1.5px solid ${state.lineColor}`;
+          td.style.padding = '0';
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = `grid-cell-input ${state.fontFamily}`;
+          input.style.fontSize = `${state.fontSize}px`;
+          input.style.color = state.textColor;
+          input.dataset.row = r;
+          input.dataset.col = c;
+          input.value = existingValues[`${r}_${c}`] || '';
+
+          // Bind IME & Keyboard Listeners
+          bindInputEvents(input, r, c);
+
+          td.appendChild(input);
+          tr.appendChild(td);
+        }
+
+        table.appendChild(tr);
+      }
+
+      // Update Footnote Description
+      const footnote = document.getElementById('colCountFootnote');
+      if (footnote) {
+        footnote.innerText = `規格：${state.showLeftCol ? '左側詞語欄 + ' : ''}右側 ${state.cols} 正方形格`;
+      }
+    }
+
+    // Bind Keyboard & Composition Event Handlers for IME Protection
+    function bindInputEvents(input, row, col) {
+      
+      // 1. Composition Events (Crucial for Quick/Cangjie/Pinyin candidates)
+      input.addEventListener('compositionstart', () => {
+        isComposing = true;
+      });
+
+      input.addEventListener('compositionupdate', () => {
+        isComposing = true;
+      });
+
+      input.addEventListener('compositionend', () => {
+        isComposing = false;
+        
+        // Handle value trimming after selection completes
+        if (col !== 'left' && input.value.length > 1) {
+          input.value = input.value.slice(-1);
+        }
+
+        // Auto-jump only AFTER Chinese character choice is finalized
+        if (state.autoJump && col !== 'left' && input.value.trim() !== '') {
+          setTimeout(() => focusNextCell(row, col), 30);
+        }
+      });
+
+      // 2. Input Event (Direct Typing / Copy-Paste)
+      input.addEventListener('input', () => {
+        if (isComposing) return; // Ignore while user is picking candidate characters
+
+        if (col !== 'left') {
+          if (input.value.length > 1) {
+            input.value = input.value.slice(-1);
+          }
+          if (state.autoJump && input.value.trim() !== '') {
+            focusNextCell(row, col);
+          }
+        }
+      });
+
+      // 3. Navigation Key Listener (Arrow keys, Enter, Backspace)
+      input.addEventListener('keydown', (e) => {
+        // NEVER interrupt keystrokes when IME candidate box is open (keyCode 229)
+        if (isComposing || e.isComposing || e.keyCode === 229) {
+          return;
+        }
+
+        const numericCol = col === 'left' ? -1 : parseInt(col);
+
+        switch (e.key) {
+          case 'ArrowRight':
+            e.preventDefault();
+            focusCell(row, numericCol + 1);
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            focusCell(row, numericCol - 1);
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            focusCell(row + 1, numericCol);
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            focusCell(row - 1, numericCol);
+            break;
+          case 'Enter':
+            e.preventDefault();
+            focusCell(row + 1, state.showLeftCol ? -1 : 0);
+            break;
+          case 'Backspace':
+            if (input.value === '') {
+              e.preventDefault();
+              focusPrevCell(row, col);
+            }
+            break;
+        }
+      });
+    }
+
+    // Cell Focus Navigation Helpers
+    function focusCell(r, c) {
+      if (r < 0 || r >= state.rows) return;
+      
+      let targetColStr = c;
+      if (c === -1) {
+        if (!state.showLeftCol) return;
+        targetColStr = 'left';
+      } else if (c >= state.cols) {
+        return;
+      }
+
+      const selector = `.grid-cell-input[data-row="${r}"][data-col="${targetColStr}"]`;
+      const target = document.querySelector(selector);
+      if (target) {
+        target.focus();
+        target.select();
+      }
+    }
+
+    function focusNextCell(r, c) {
+      let numC = c === 'left' ? -1 : parseInt(c);
+      if (numC + 1 < state.cols) {
+        focusCell(r, numC + 1);
+      } else if (r + 1 < state.rows) {
+        focusCell(r + 1, state.showLeftCol ? -1 : 0);
+      }
+    }
+
+    function focusPrevCell(r, c) {
+      let numC = c === 'left' ? -1 : parseInt(c);
+      if (numC > (state.showLeftCol ? -1 : 0)) {
+        focusCell(r, numC - 1);
+      } else if (r > 0) {
+        focusCell(r - 1, state.cols - 1);
+      }
+    }
+
+    // Quick Preset Column Selector Handler (10, 13, 16 Cols)
+    function setQuickCols(count) {
+      state.cols = count;
+      document.getElementById('inputCols').value = count;
+      
+      // Auto adjust grid sizing for 16 cols to fit comfortably on paper
+      if (count === 16 && state.gridSize > 42) {
+        state.gridSize = 40;
+        document.getElementById('selectGridSize').value = 40;
+      } else if (count === 10 && state.gridSize < 45) {
+        state.gridSize = 48;
+        document.getElementById('selectGridSize').value = 48;
+      }
+
+      updateQuickPresetUI(count);
+      updateGridDimensions();
+      showToast(`已切換為 ${count} 格方格`);
+    }
+
+    function onCustomColsSliderChange(val) {
+      const num = parseInt(val) || 13;
+      state.cols = num;
+      updateQuickPresetUI(num);
+      updateGridDimensions();
+    }
+
+    function updateQuickPresetUI(activeCount) {
+      document.getElementById('colsVal').innerText = `${state.cols} 欄`;
+      
+      const btn10 = document.getElementById('btnPreset10');
+      const btn13 = document.getElementById('btnPreset13');
+      const btn16 = document.getElementById('btnPreset16');
+      const badge = document.getElementById('presetBadge');
+
+      [btn10, btn13, btn16].forEach(btn => btn.classList.remove('btn-preset-active'));
+
+      if (activeCount === 10) {
+        btn10.classList.add('btn-preset-active');
+        badge.innerText = '10 格 (簡短版)';
+      } else if (activeCount === 13) {
+        btn13.classList.add('btn-preset-active');
+        badge.innerText = '13 格 (預設版)';
+      } else if (activeCount === 16) {
+        btn16.classList.add('btn-preset-active');
+        badge.innerText = '16 格 (長句/配詞版)';
+      } else {
+        badge.innerText = `自訂 (${activeCount} 格)`;
+      }
+    }
+
+    // Dynamic Layout Dimension Updates
+    function updateGridDimensions() {
+      state.rows = parseInt(document.getElementById('inputRows').value) || 11;
+      state.cols = parseInt(document.getElementById('inputCols').value) || 13;
+      state.showLeftCol = document.getElementById('toggleLeftCol').checked;
+      state.leftColWidth = parseInt(document.getElementById('inputLeftWidth').value) || 130;
+      state.gridSize = parseInt(document.getElementById('selectGridSize').value) || 45;
+
+      document.getElementById('rowsVal').innerText = `${state.rows} 列`;
+      document.getElementById('leftWidthVal').innerText = `${state.leftColWidth} px`;
+      document.getElementById('leftWidthBox').style.display = state.showLeftCol ? 'block' : 'none';
+
+      renderGridTable();
+    }
+
+    function updateFontAndColor() {
+      state.fontFamily = document.getElementById('selectFont').value;
+      state.fontSize = parseInt(document.getElementById('selectFontSize').value) || 26;
+
+      const fontClasses = ['font-biaukai', 'font-jhenghei', 'font-mingliu'];
+
+      document.querySelectorAll('.grid-cell-input').forEach(inp => {
+        fontClasses.forEach(fc => inp.classList.remove(fc));
+        inp.classList.add(state.fontFamily);
+        inp.style.color = state.textColor;
+        if (inp.dataset.col === 'left') {
+          inp.style.fontSize = `${Math.max(14, state.fontSize - 6)}px`;
+        } else {
+          inp.style.fontSize = `${state.fontSize}px`;
+        }
+      });
+    }
+
+    function setLineColor(color) {
+      state.lineColor = color;
+      document.querySelectorAll('#gridTable td').forEach(td => {
+        td.style.borderColor = color;
+      });
+      showToast('格線顏色已更新');
+    }
+
+    function setTextColor(color) {
+      state.textColor = color;
+      document.getElementById('textColorPicker').value = color;
+      updateFontAndColor();
+      showToast('文字顏色已更新');
+    }
+
+    function toggleAutoJumpSetting(enabled) {
+      state.autoJump = enabled;
+      showToast(enabled ? '已開啟打字自動跳格' : '已關閉自動跳格 (建議速成/倉頡輸入法)');
+    }
+
+    function toggleHeaderMetaView() {
+      const show = document.getElementById('toggleHeaderMeta').checked;
+      document.getElementById('sheetHeaderMeta').style.display = show ? 'flex' : 'none';
+    }
+
+    function toggleSheetTitleView() {
+      const show = document.getElementById('toggleSheetTitle').checked;
+      document.getElementById('sheetTitleBox').style.display = show ? 'block' : 'none';
+    }
+
+    // Batch Words Parser & Import Logic
+    function openBatchModal() {
+      document.getElementById('batchModal').classList.remove('hidden');
+    }
+
+    function closeBatchModal() {
+      document.getElementById('batchModal').classList.add('hidden');
+    }
+
+    function executeBatchImport() {
+      const text = document.getElementById('batchInputText').value;
+      const autoNumber = document.getElementById('batchAutoNumber').checked;
+
+      if (!text.trim()) {
+        closeBatchModal();
+        return;
+      }
+
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      // Expand rows if list exceeds current table size
+      if (lines.length > state.rows) {
+        state.rows = lines.length;
+        document.getElementById('inputRows').value = lines.length;
+        document.getElementById('rowsVal').innerText = `${lines.length} 列`;
+        renderGridTable();
+      } else {
+        clearAllGridContent();
+      }
+
+      lines.forEach((line, rIndex) => {
+        if (rIndex >= state.rows) return;
+
+        let wordText = line;
+        let promptText = line;
+
+        // Extract auto-numbering if present (e.g. "1. 持之以恆")
+        const match = line.match(/^(\d+[\.\)]*)\s*(.*)/);
+        if (match) {
+          promptText = autoNumber ? line : match[2];
+          wordText = match[2];
+        } else if (autoNumber) {
+          promptText = `${rIndex + 1}. ${line}`;
+        }
+
+        // Fill Left Column
+        if (state.showLeftCol) {
+          const leftInput = document.querySelector(`.grid-cell-input[data-row="${rIndex}"][data-col="left"]`);
+          if (leftInput) leftInput.value = promptText;
+        }
+
+        // Fill Right Square Cells
+        const chars = Array.from(wordText);
+        chars.forEach((char, cIndex) => {
+          if (cIndex < state.cols) {
+            const squareInput = document.querySelector(`.grid-cell-input[data-row="${rIndex}"][data-col="${cIndex}"]`);
+            if (squareInput) squareInput.value = char;
+          }
+        });
+      });
+
+      closeBatchModal();
+      showToast('已成功批量匯入詞語！');
+    }
+
+    function clearAllGridContent() {
+      document.querySelectorAll('.grid-cell-input').forEach(inp => inp.value = '');
+      showToast('方格內容已清空');
+    }
+
+    function resetDefaultSettings() {
+      state.rows = 11;
+      state.cols = 13;
+      state.showLeftCol = true;
+      state.leftColWidth = 130;
+      state.gridSize = 45;
+      state.fontSize = 26;
+      state.fontFamily = 'font-biaukai';
+      state.lineColor = '#0088cc';
+      state.textColor = '#000000';
+      state.autoJump = false;
+
+      document.getElementById('inputRows').value = 11;
+      document.getElementById('inputCols').value = 13;
+      document.getElementById('toggleLeftCol').checked = true;
+      document.getElementById('inputLeftWidth').value = 130;
+      document.getElementById('selectGridSize').value = 45;
+      document.getElementById('selectFontSize').value = 26;
+      document.getElementById('selectFont').value = 'font-biaukai';
+ document.getElementById('toggleAutoJump').checked = false;
+
+      updateQuickPresetUI(13);
+      renderGridTable();
+      showToast('已重設為預設設定');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+      }, 2400);
+    }
+  </script>
+</body>
+</html>
